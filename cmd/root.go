@@ -1,0 +1,43 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "wyog",
+	Short: "An implementation of a subset of git commands",
+	Long: `This is a personal project intended to learn more
+about the internals of git by creating a toy 
+implementation of git`,
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.AddCommand(
+		addCmd,
+		catFileCmd,
+		checkIgnoreCmd,
+		checkoutCmd,
+		commitCmd,
+		hashObjectCmd,
+		initCmd,
+		logCmd,
+		lsFilesCmd,
+		lsTreeCmd,
+		revParseCmd,
+		rmCmd,
+		showRefCmd,
+		statusCmd,
+		tagCmd,
+	)
+}
