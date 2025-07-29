@@ -5,8 +5,8 @@ type LinkedMap[K comparable, V any] struct {
 	keys []K
 }
 
-func NewLinkedMap[K comparable, V any]() LinkedMap[K, V] {
-	return LinkedMap[K, V]{
+func NewLinkedMap[K comparable, V any]() *LinkedMap[K, V] {
+	return &LinkedMap[K, V]{
 		m:    make(map[K]V),
 		keys: make([]K, 0),
 	}
