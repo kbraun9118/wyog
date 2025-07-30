@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 
 	"github.com/kbraun9118/wyog/repository"
@@ -37,14 +38,33 @@ func (gc *Commit) Fmt() []byte {
 }
 
 type Tree struct {
+	Items []TreeLeaf
 }
 
 func NewTree(data []byte) *Tree {
-	return &Tree{}
+	return &Tree{
+		Items: TreeParse(data),
+	}
 }
 
 func (gc *Tree) Serialize() []byte {
-	return nil
+	items := slices.Clone(gc.Items)
+	slices.SortFunc(items, treeLeafSort)
+
+	ret := make([]byte, 0)
+	for _, i := range items {
+		ret = append(ret, i.Mode...)
+		ret = append(ret, ' ')
+		ret = append(ret, []byte(i.Path)...)
+		ret = append(ret, '\x00')
+		sha, err := hex.DecodeString(i.Sha)
+		if err != nil {
+			panic(fmt.Errorf("error decoding to hex"))
+		}
+		ret = append(ret, sha...)
+	}
+
+	return ret
 }
 
 func (gc *Tree) Fmt() []byte {
