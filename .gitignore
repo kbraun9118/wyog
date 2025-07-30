@@ -1,2 +1,4 @@
 .vscode
 wyog
+*.dot
+*.pdf

@@ -137,3 +137,12 @@ func Find(path string) *string {
 
 	return Find(parent)
 }
+
+func FindRequire(path string) (string, error) {
+	p := Find(path)
+	if p == nil {
+		return "", fmt.Errorf("not a git repository (or any of the parent directories)")
+	}
+
+	return *p, nil
+}

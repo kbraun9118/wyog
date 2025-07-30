@@ -22,11 +22,11 @@ var catFileCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		repoPath := repository.Find(".")
-		if repoPath == nil {
-			return fmt.Errorf("not a git repository (or any of the parent directories)")
+		repoPath, err := repository.FindRequire(".")
+		if err != nil {
+			return err
 		}
-		repo, err := repository.New(*repoPath)
+		repo, err := repository.New(repoPath)
 		if err != nil {
 			return err
 		}

@@ -19,14 +19,17 @@ type GitObject interface {
 }
 
 type Commit struct {
+	Kvlm kvlmData
 }
 
 func NewCommit(data []byte) *Commit {
-	return &Commit{}
+	return &Commit{
+		Kvlm: kvlmParse(data, 0, nil),
+	}
 }
 
 func (gc *Commit) Serialize() []byte {
-	return nil
+	return gc.Kvlm.Serialize()
 }
 
 func (gc *Commit) Fmt() []byte {

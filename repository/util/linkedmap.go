@@ -13,6 +13,10 @@ func NewLinkedMap[K comparable, V any]() *LinkedMap[K, V] {
 }
 
 func (lm *LinkedMap[K, V]) Set(key K, value V) {
+	if _, ok := lm.m[key]; ok {
+		lm.m[key] = value
+		return
+	}
 	lm.m[key] = value
 	lm.keys = append(lm.keys, key)
 }
