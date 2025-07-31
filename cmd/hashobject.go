@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/kbraun9118/wyog/gitobject"
 	"github.com/kbraun9118/wyog/repository"
 	"github.com/spf13/cobra"
 )
@@ -56,19 +55,19 @@ func objectHash(fd *os.File, format string, repo *repository.Repository) (string
 		return "", fmt.Errorf("cannot read file")
 	}
 
-	var obj gitobject.GitObject
+	var obj repository.GitObject
 	switch format {
 	case "commit":
-		obj = gitobject.NewCommit(data)
+		obj = repository.NewCommit(data)
 	case "tree":
-		obj = gitobject.NewTree(data)
+		obj = repository.NewTree(data)
 	case "tag":
-		obj = gitobject.NewTag(data)
+		obj = repository.NewTag(data)
 	case "blob":
-		obj = gitobject.NewBlob(data)
+		obj = repository.NewBlob(data)
 	default:
 		return "", fmt.Errorf("invalid type")
 	}
 
-	return gitobject.Write(obj, repo)
+	return repository.Write(obj, repo)
 }

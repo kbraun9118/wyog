@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/kbraun9118/wyog/gitobject"
 	"github.com/kbraun9118/wyog/repository"
 	"github.com/spf13/cobra"
 )
@@ -39,13 +38,16 @@ var (
 )
 
 func ls_tree(repo repository.Repository, ref string, prefix string) error {
-	sha := gitobject.Find(&repo, ref, "tree")
-	obj, err := gitobject.Read(&repo, sha)
+	sha, err := repository.ObjectFind(&repo, ref, "tree")
+	if err != nil {
+		return err
+	}
+	obj, err := repository.Read(&repo, sha)
 	if err != nil {
 		return err
 	}
 
-	treeObj, ok := obj.(*gitobject.Tree)
+	treeObj, ok := obj.(*repository.Tree)
 	if !ok {
 		return fmt.Errorf("incorrect object type")
 	}

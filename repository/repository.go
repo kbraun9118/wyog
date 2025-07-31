@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"gopkg.in/ini.v1"
 )
@@ -63,11 +65,11 @@ func new(path string, force bool) (Repository, error) {
 	return repo, nil
 }
 
-func (r Repository) Path(paths ...string) string {
+func (r *Repository) Path(paths ...string) string {
 	return filepath.Join(r.Gitdir, filepath.Join(paths...))
 }
 
-func (r Repository) dir(mkdir bool, path ...string) (*string, error) {
+func (r *Repository) dir(mkdir bool, path ...string) (*string, error) {
 	repoPath := r.Path(path...)
 
 	if pathStat, err := os.Stat(repoPath); err == nil {
@@ -89,15 +91,15 @@ func (r Repository) dir(mkdir bool, path ...string) (*string, error) {
 	return nil, nil
 }
 
-func (r Repository) Dir(path ...string) (*string, error) {
+func (r *Repository) Dir(path ...string) (*string, error) {
 	return r.dir(false, path...)
 }
 
-func (r Repository) DirMk(path ...string) (*string, error) {
+func (r *Repository) DirMk(path ...string) (*string, error) {
 	return r.dir(true, path...)
 }
 
-func (r Repository) file(mkdir bool, path ...string) (*string, error) {
+func (r *Repository) file(mkdir bool, path ...string) (*string, error) {
 	p, err := r.dir(mkdir, path[:len(path)-1]...)
 	if err != nil {
 		return nil, err
@@ -111,12 +113,79 @@ func (r Repository) file(mkdir bool, path ...string) (*string, error) {
 	return nil, nil
 }
 
-func (r Repository) File(path ...string) (*string, error) {
+func (r *Repository) File(path ...string) (*string, error) {
 	return r.file(false, path...)
 }
 
-func (r Repository) FileMk(path ...string) (*string, error) {
+func (r *Repository) FileMk(path ...string) (*string, error) {
 	return r.file(true, path...)
+}
+
+var hashRe *regexp.Regexp = regexp.MustCompile("^[0-9A-Fa-f]{4,40}$")
+
+func (r *Repository) Resolve(name string) ([]string, error) {
+	name = strings.TrimSpace(name)
+	if len(name) == 0 {
+		return nil, fmt.Errorf("name must be supplied")
+	}
+
+	if name == "HEAD" {
+		head, err := RefResolve(r, "HEAD")
+		if err != nil {
+			return nil, err
+		}
+		return []string{*head}, nil
+	}
+
+	candidates := make([]string, 0)
+
+	if hashRe.Match([]byte(name)) {
+		name := strings.ToLower(name)
+		prefix := name[0:2]
+		path, err := r.Dir("objects", prefix)
+		if err != nil {
+			return nil, err
+		}
+		if path != nil {
+			rem := name[2:]
+			dirs, err := os.ReadDir(*path)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, f := range dirs {
+				if strings.HasPrefix(f.Name(), rem) {
+					candidates = append(candidates, prefix+f.Name())
+				}
+			}
+		}
+	}
+
+	asTag, err := RefResolve(r, "refs/tags/"+name)
+	if err != nil {
+		return nil, err
+	}
+	if asTag != nil {
+		candidates = append(candidates, *asTag)
+	}
+
+	asBranch, err := RefResolve(r, "refs/heads/"+name)
+	if err != nil {
+		return nil, err
+	}
+	if asTag != nil {
+		candidates = append(candidates, *asBranch)
+	}
+
+	asRemoteBranch, err := RefResolve(r, "refs/remotes/"+name)
+	if err != nil {
+		return nil, err
+	}
+	if asTag != nil {
+		candidates = append(candidates, *asRemoteBranch)
+	}
+
+	return candidates, nil
 }
 
 func Find(path string) *string {

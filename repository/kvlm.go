@@ -1,10 +1,10 @@
-package gitobject
+package repository
 
 import (
 	"bytes"
 	"strings"
 
-	"github.com/kbraun9118/wyog/repository/util"
+	"github.com/kbraun9118/wyog/util"
 )
 
 type KvlmData struct {

@@ -1,4 +1,4 @@
-package ref
+package repository
 
 import (
 	"bytes"
@@ -7,11 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-
-	"github.com/kbraun9118/wyog/repository"
 )
 
-func Resolve(repo *repository.Repository, ref string) (*string, error) {
+func RefResolve(repo *Repository, ref string) (*string, error) {
 
 	if fileStat, err := os.Stat(ref); err != nil || fileStat.IsDir() {
 		return nil, nil
@@ -29,14 +27,14 @@ func Resolve(repo *repository.Repository, ref string) (*string, error) {
 			return nil, err
 		}
 
-		return Resolve(repo, *path)
+		return RefResolve(repo, *path)
 	}
 
 	out := string(data)
 	return &out, nil
 }
 
-func List(repo *repository.Repository, path *string) (map[string]any, error) {
+func RefList(repo *Repository, path *string) (map[string]any, error) {
 	if path == nil {
 		var err error
 		path, err = repo.Dir("refs")
@@ -62,13 +60,13 @@ func List(repo *repository.Repository, path *string) (map[string]any, error) {
 			return nil, fmt.Errorf("cannot stat file %s", can)
 		}
 		if canStat.IsDir() {
-			out, err := List(repo, &can)
+			out, err := RefList(repo, &can)
 			if err != nil {
 				return nil, err
 			}
 			ret[f.Name()] = out
 		} else {
-			out, err := Resolve(repo, can)
+			out, err := RefResolve(repo, can)
 			if err != nil {
 				return nil, err
 			}

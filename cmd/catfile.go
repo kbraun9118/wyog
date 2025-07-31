@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/kbraun9118/wyog/gitobject"
 	"github.com/kbraun9118/wyog/repository"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +37,11 @@ var catFileCmd = &cobra.Command{
 }
 
 func catFile(repo *repository.Repository, object string, format string) error {
-	obj, err := gitobject.Read(repo, gitobject.Find(repo, object, format))
+	sha, err := repository.ObjectFind(repo, object, format)
+	if err != nil {
+		return err
+	}
+	obj, err := repository.Read(repo, sha)
 	if err != nil {
 		return err
 	}

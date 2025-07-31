@@ -13,6 +13,7 @@ var rootCmd = &cobra.Command{
 	Long: `This is a personal project intended to learn more
 about the internals of git by creating a toy 
 implementation of git`,
+	Version: "0.0.1",
 }
 
 func Execute() {

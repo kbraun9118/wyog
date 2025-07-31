@@ -1,4 +1,4 @@
-package gitobject
+package repository
 
 import (
 	"bytes"
@@ -10,8 +10,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
-
-	"github.com/kbraun9118/wyog/repository"
+	"strings"
 )
 
 type GitObject interface {
@@ -107,7 +106,7 @@ func (gc *Blob) Fmt() []byte {
 	return []byte("blob")
 }
 
-func Read(repo *repository.Repository, sha string) (GitObject, error) {
+func Read(repo *Repository, sha string) (GitObject, error) {
 	path, err := repo.File("objects", sha[0:2], sha[2:])
 	if err != nil {
 		return nil, fmt.Errorf("cannot open object: %s\n", sha)
@@ -153,7 +152,7 @@ func Read(repo *repository.Repository, sha string) (GitObject, error) {
 	}
 }
 
-func Write(obj GitObject, repo *repository.Repository) (string, error) {
+func Write(obj GitObject, repo *Repository) (string, error) {
 	data := obj.Serialize()
 
 	result := append(obj.Fmt(), byte(' '))
@@ -194,6 +193,63 @@ func Write(obj GitObject, repo *repository.Repository) (string, error) {
 	return sha, nil
 }
 
-func Find(repo *repository.Repository, name string, format string) string {
-	return name
+func find(repo *Repository, name string, format string, follow bool) (string, error) {
+	shas, err := repo.Resolve(name)
+	if err != nil {
+		return "", err
+	}
+
+	if len(shas) > 1 {
+		return "", fmt.Errorf("ambiguous refernce %s: candidates are:\n - %s", name, strings.Join(shas, "\n - "))
+	}
+
+	sha := shas[0]
+
+	if len(format) == 0 {
+		return sha, nil
+	}
+
+	for {
+		obj, err := Read(repo, sha)
+		if err != nil {
+			return "", err
+		}
+
+		if string(obj.Fmt()) == format {
+			return sha, nil
+		}
+
+		if !follow {
+			return "", nil
+		}
+
+		switch obj := obj.(type) {
+		case *Tag:
+			tagObj, ok := obj.Kvlm.Headers.Get("object")
+			if !ok || len(tagObj) > 0 {
+				return "", fmt.Errorf("no object found")
+			}
+			sha = tagObj[0]
+			continue
+		case *Commit:
+			if format == "tree" {
+				treeObj, ok := obj.Kvlm.Headers.Get("tree")
+				if !ok || len(treeObj) > 0 {
+					return "", fmt.Errorf("no object found")
+				}
+				sha = treeObj[0]
+				continue
+			}
+		}
+
+		return "", nil
+	}
+}
+
+func ObjectFind(repo *Repository, name string, format string) (string, error) {
+	return find(repo, name, format, true)
+}
+
+func FindNoFollow(repo *Repository, name string, format string) (string, error) {
+	return find(repo, name, format, false)
 }

@@ -1,4 +1,4 @@
-package gitobject
+package repository
 
 import (
 	"bytes"

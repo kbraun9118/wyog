@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kbraun9118/wyog/gitobject"
 	"github.com/kbraun9118/wyog/repository"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +30,10 @@ var logCmd = &cobra.Command{
 			sha = args[0]
 		}
 
-		obj := gitobject.Find(&repo, sha, "commit")
+		obj, err := repository.ObjectFind(&repo, sha, "commit")
+		if err != nil {
+			return err
+		}
 		err = logGraphviz(&repo, obj, make(map[string]bool))
 		if err != nil {
 			return err
@@ -49,12 +51,12 @@ func logGraphviz(repo *repository.Repository, sha string, seen map[string]bool) 
 	}
 	seen[sha] = true
 
-	obj, err := gitobject.Read(repo, sha)
+	obj, err := repository.Read(repo, sha)
 	if err != nil {
 		return err
 	}
 
-	commit, ok := obj.(*gitobject.Commit)
+	commit, ok := obj.(*repository.Commit)
 	if !ok {
 		return fmt.Errorf("%s is not a commit", sha)
 	}

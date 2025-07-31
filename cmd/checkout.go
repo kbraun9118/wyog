@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kbraun9118/wyog/gitobject"
 	"github.com/kbraun9118/wyog/repository"
 	"github.com/spf13/cobra"
 )
@@ -27,20 +26,24 @@ var checkoutCmd = &cobra.Command{
 
 		commit, path := args[0], args[1]
 
-		obj, err := gitobject.Read(&repo, gitobject.Find(&repo, commit, "commit"))
+		sha, err := repository.ObjectFind(&repo, commit, "")
+		if err != nil {
+			return err
+		}
+		obj, err := repository.Read(&repo, sha)
 		if err != nil {
 			return err
 		}
 
-		if commitObj, ok := obj.(*gitobject.Commit); ok {
+		if commitObj, ok := obj.(*repository.Commit); ok {
 			tree, ok := commitObj.Kvlm.Headers.Get("tree")
 			if !ok {
 				return fmt.Errorf("cannot find tree object")
 			}
-			obj, err = gitobject.Read(&repo, tree[0])
+			obj, err = repository.Read(&repo, tree[0])
 		}
 
-		treeObj, ok := obj.(*gitobject.Tree)
+		treeObj, ok := obj.(*repository.Tree)
 		if !ok {
 			return fmt.Errorf("")
 		}
@@ -71,28 +74,28 @@ var checkoutCmd = &cobra.Command{
 	},
 }
 
-func treeCheckout(repo *repository.Repository, tree *gitobject.Tree, path string) error {
+func treeCheckout(repo *repository.Repository, tree *repository.Tree, path string) error {
 	for _, item := range tree.Items {
-		obj, err := gitobject.Read(repo, item.Sha)
+		obj, err := repository.Read(repo, item.Sha)
 		if err != nil {
 			return err
 		}
 		dest := filepath.Join(path, item.Path)
 
 		switch objType := obj.(type) {
-		case *gitobject.Tree:
+		case *repository.Tree:
 			os.Mkdir(dest, 0755)
 			err := treeCheckout(repo, objType, dest)
 			if err != nil {
 				return err
 			}
-		case *gitobject.Blob:
+		case *repository.Blob:
 			err := os.WriteFile(dest, objType.Serialize(), 0644)
 			if err != nil {
 				return fmt.Errorf("cannot write file %s", dest)
 			}
 		default:
-			return fmt.Errorf("incorrect gitobject type")
+			return fmt.Errorf("incorrect repository.type")
 		}
 	}
 

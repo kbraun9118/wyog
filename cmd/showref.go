@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/kbraun9118/wyog/ref"
 	"github.com/kbraun9118/wyog/repository"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +21,7 @@ var showRefCmd = &cobra.Command{
 			return err
 		}
 
-		refs, err := ref.List(&repo, nil)
+		refs, err := repository.RefList(&repo, nil)
 		if err != nil {
 			return err
 		}
