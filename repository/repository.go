@@ -130,7 +130,11 @@ func (r *Repository) Resolve(name string) ([]string, error) {
 	}
 
 	if name == "HEAD" {
-		head, err := RefResolve(r, "HEAD")
+		headPath, err := r.File("HEAD")
+		if err != nil {
+			return nil, err
+		}
+		head, err := RefResolve(r, *headPath)
 		if err != nil {
 			return nil, err
 		}
