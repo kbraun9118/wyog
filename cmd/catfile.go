@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO: get this to work with ObjectFind
 var catFileCmd = &cobra.Command{
 	Use:   "cat-file type object",
 	Short: "Provide content of repository objects",
