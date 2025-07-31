@@ -20,7 +20,7 @@ type GitObject interface {
 }
 
 type Commit struct {
-	Kvlm kvlmData
+	Kvlm KvlmData
 }
 
 func NewCommit(data []byte) *Commit {
@@ -72,14 +72,13 @@ func (gc *Tree) Fmt() []byte {
 }
 
 type Tag struct {
+	*Commit
 }
 
 func NewTag(data []byte) *Tag {
-	return &Tag{}
-}
-
-func (gc *Tag) Serialize() []byte {
-	return nil
+	return &Tag{
+		Commit: NewCommit(data),
+	}
 }
 
 func (gc *Tag) Fmt() []byte {

@@ -7,12 +7,12 @@ import (
 	"github.com/kbraun9118/wyog/repository/util"
 )
 
-type kvlmData struct {
+type KvlmData struct {
 	Headers util.LinkedMap[string, []string]
 	Message []byte
 }
 
-func kvlmParse(raw []byte, start int, headers *util.LinkedMap[string, []string]) kvlmData {
+func kvlmParse(raw []byte, start int, headers *util.LinkedMap[string, []string]) KvlmData {
 	if headers == nil {
 		headers = util.NewLinkedMap[string, []string]()
 	}
@@ -25,7 +25,7 @@ func kvlmParse(raw []byte, start int, headers *util.LinkedMap[string, []string])
 			panic("n1 and start should equal")
 		}
 
-		return kvlmData{
+		return KvlmData{
 			Headers: *headers,
 			Message: raw[start+1:],
 		}
@@ -53,7 +53,7 @@ func kvlmParse(raw []byte, start int, headers *util.LinkedMap[string, []string])
 	return kvlmParse(raw, end+1, headers)
 }
 
-func (kvlm kvlmData) Serialize() []byte {
+func (kvlm KvlmData) Serialize() []byte {
 	ret := make([]byte, 0)
 
 	for k, val := range kvlm.Headers.Iterate() {
