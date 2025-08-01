@@ -199,6 +199,10 @@ func find(repo *Repository, name string, format string, follow bool) (string, er
 		return "", err
 	}
 
+	if len(shas) == 0 {
+		return "", fmt.Errorf("no such reference %s", name)
+	}
+
 	if len(shas) > 1 {
 		return "", fmt.Errorf("ambiguous refernce %s: candidates are:\n - %s", name, strings.Join(shas, "\n - "))
 	}

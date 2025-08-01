@@ -165,7 +165,11 @@ func (r *Repository) Resolve(name string) ([]string, error) {
 		}
 	}
 
-	asTag, err := RefResolve(r, "refs/tags/"+name)
+	tagPath, err := r.File("refs/tags/" + name)
+	if err != nil {
+		return nil, err
+	}
+	asTag, err := RefResolve(r, *tagPath)
 	if err != nil {
 		return nil, err
 	}
@@ -173,19 +177,27 @@ func (r *Repository) Resolve(name string) ([]string, error) {
 		candidates = append(candidates, *asTag)
 	}
 
-	asBranch, err := RefResolve(r, "refs/heads/"+name)
+	branchPath, err := r.File("refs/heads/" + name)
 	if err != nil {
 		return nil, err
 	}
-	if asTag != nil {
+	asBranch, err := RefResolve(r, *branchPath)
+	if err != nil {
+		return nil, err
+	}
+	if asBranch != nil {
 		candidates = append(candidates, *asBranch)
 	}
 
-	asRemoteBranch, err := RefResolve(r, "refs/remotes/"+name)
+	remoteBranchPath, err := r.File("refs/remotes/" + name)
 	if err != nil {
 		return nil, err
 	}
-	if asTag != nil {
+	asRemoteBranch, err := RefResolve(r, *remoteBranchPath)
+	if err != nil {
+		return nil, err
+	}
+	if asRemoteBranch != nil {
 		candidates = append(candidates, *asRemoteBranch)
 	}
 
