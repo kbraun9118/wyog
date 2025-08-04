@@ -1,11 +1,17 @@
 package repository
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
+	"time"
 
 	"gopkg.in/ini.v1"
 )
@@ -202,6 +208,100 @@ func (r *Repository) Resolve(name string) ([]string, error) {
 	}
 
 	return candidates, nil
+}
+
+func ReadIndex() (*Index, error) {
+	raw, err := os.ReadFile("./index")
+	if err != nil {
+		return nil, fmt.Errorf("could not read index file")
+	}
+
+	rawHeader := raw[:12]
+	var header IndexHeader
+	if err := binary.Read(bytes.NewBuffer(rawHeader), binary.BigEndian, &header); err != nil {
+		return nil, fmt.Errorf("cannot read index file header")
+	}
+	if !bytes.Equal(header.Signature[:], []byte("DIRC")) {
+		return nil, fmt.Errorf("incorrect header signature")
+	}
+	if header.Version != 2 {
+		return nil, fmt.Errorf("wyog only supports index file version 2")
+	}
+
+	content := raw[12:]
+	idx := 0
+	entries := make([]IndexEntry, 0)
+	for i := range header.Count {
+		fmt.Printf("processing %d/%d\n", i, header.Count)
+		var entry IndexBinaryEntry
+		if err := binary.Read(bytes.NewBuffer(content[idx:idx+62]), binary.BigEndian, &entry); err != nil {
+			return nil, fmt.Errorf("cannot read index entry")
+		}
+
+		ctime := time.Unix(int64(entry.CtimeSec), int64(entry.CtimeNSec))
+		mtime := time.Unix(int64(entry.MtimeSec), int64(entry.MtimeNSec))
+
+		if entry.Unused != 0 {
+			return nil, fmt.Errorf("incorrect index entry format")
+		}
+
+		modeType := uint16(entry.Mode >> 12)
+		if !slices.Contains([]uint16{0b1000, 0b1010, 0b1110}, modeType) {
+			return nil, fmt.Errorf("incorrect mode type")
+		}
+		modePerms := entry.Mode & 0b0000000111111111
+
+		sha := fmt.Sprintf("%020s", hex.EncodeToString(entry.Sha[:]))
+
+		assumeValid := (entry.Flags & 0b1000000000000000) != 0
+		extended := (entry.Flags & 0b0100000000000000) != 0
+		if extended {
+			return nil, fmt.Errorf("version 2 does not support extended")
+		}
+		stage := entry.Flags & 0b0011000000000000
+
+		nameLength := entry.Flags & 0b0000111111111111
+
+		idx += 62
+
+		var rawName []byte
+		if nameLength < 0xFFF {
+			if content[idx+int(nameLength)] != 0x00 {
+				return nil, fmt.Errorf("index entry name is incorrect format")
+			}
+
+			rawName = content[idx : idx+int(nameLength)]
+			idx += int(nameLength) + 1
+		} else {
+			fmt.Printf("Notice: Name is 0x%x bytes long", nameLength)
+			nullIdx := bytes.Index(content[idx+0xFFF:], []byte{'\x00'})
+			rawName = content[idx : idx+nullIdx]
+			idx += nullIdx + 1
+		}
+
+		name := string(rawName)
+		idx = int(8 * math.Ceil(float64(idx)/8))
+
+		entries = append(entries, IndexEntry{
+			Ctime:       ctime,
+			Mtime:       mtime,
+			Dev:         int(entry.Dev),
+			Ino:         int(entry.Ino),
+			ModeType:    int(modeType),
+			ModePerms:   int(modePerms),
+			Uid:         int(entry.Uid),
+			Gid:         int(entry.Gid),
+			Fsize:       int(entry.Fsize),
+			Sha:         sha,
+			AssumeValid: assumeValid,
+			Stage:       int(stage),
+			Name:        name,
+		})
+		fmt.Printf("processed %s\n", name)
+	}
+
+	index := NewIndexV2(entries)
+	return &index, nil
 }
 
 func Find(path string) *string {
