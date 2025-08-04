@@ -210,10 +210,19 @@ func (r *Repository) Resolve(name string) ([]string, error) {
 	return candidates, nil
 }
 
-func ReadIndex() (*Index, error) {
-	raw, err := os.ReadFile("./index")
+func (r *Repository) ReadIndex() (*Index, error) {
+	indexFile, err := r.File("index")
 	if err != nil {
-		return nil, fmt.Errorf("could not read index file")
+		return nil, fmt.Errorf("could not find index path")
+	}
+
+	if _, err := os.Stat(*indexFile); err != nil {
+		return nil, nil
+	}
+
+	raw, err := os.ReadFile(*indexFile)
+	if err != nil {
+		return nil, fmt.Errorf("error reading index file")
 	}
 
 	rawHeader := raw[:12]
@@ -231,8 +240,7 @@ func ReadIndex() (*Index, error) {
 	content := raw[12:]
 	idx := 0
 	entries := make([]IndexEntry, 0)
-	for i := range header.Count {
-		fmt.Printf("processing %d/%d\n", i, header.Count)
+	for range header.Count {
 		var entry IndexBinaryEntry
 		if err := binary.Read(bytes.NewBuffer(content[idx:idx+62]), binary.BigEndian, &entry); err != nil {
 			return nil, fmt.Errorf("cannot read index entry")
@@ -273,7 +281,6 @@ func ReadIndex() (*Index, error) {
 			rawName = content[idx : idx+int(nameLength)]
 			idx += int(nameLength) + 1
 		} else {
-			fmt.Printf("Notice: Name is 0x%x bytes long", nameLength)
 			nullIdx := bytes.Index(content[idx+0xFFF:], []byte{'\x00'})
 			rawName = content[idx : idx+nullIdx]
 			idx += nullIdx + 1
@@ -297,11 +304,74 @@ func ReadIndex() (*Index, error) {
 			Stage:       int(stage),
 			Name:        name,
 		})
-		fmt.Printf("processed %s\n", name)
 	}
 
 	index := NewIndexV2(entries)
 	return &index, nil
+}
+
+func (r *Repository) ReadGitignore() (Ignores, error) {
+	ret := NewIgnores()
+
+	repoFile := filepath.Join(r.Gitdir, "info", "exclude")
+	if _, err := os.Stat(repoFile); err == nil {
+		data, err := os.ReadFile(repoFile)
+		if err != nil {
+			return Ignores{}, fmt.Errorf("error reading .git/info/exclude")
+		}
+		lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
+		ignores := gitignoreParse(lines)
+		ret.Absolute = append(ret.Absolute, ignores...)
+	}
+
+	configHome, err := filepath.Abs("~/.config")
+	if err != nil {
+		return Ignores{}, fmt.Errorf("cannot create path %s", configHome)
+	}
+	if xdgHome, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {
+		config, err := filepath.Abs(xdgHome)
+		if err != nil {
+			return Ignores{}, fmt.Errorf("cannot create path %s", config)
+		}
+		configHome = config
+	}
+	globalFile := filepath.Join(configHome, "git", "ignore")
+
+	if _, err := os.Stat(globalFile); err == nil {
+		data, err := os.ReadFile(globalFile)
+		if err != nil {
+			return Ignores{}, fmt.Errorf("error reading global config")
+		}
+		lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
+		ignores := gitignoreParse(lines)
+		ret.Absolute = append(ret.Absolute, ignores...)
+	}
+
+	index, err := r.ReadIndex()
+	if err != nil {
+		return Ignores{}, err
+	}
+
+	for _, entry := range index.Entries {
+		if entry.Name == ".gitignore" || strings.HasSuffix(entry.Name, "/.gitignore") {
+			dirName, err := filepath.Abs(filepath.Dir(entry.Name))
+			if err != nil {
+				return Ignores{}, fmt.Errorf("cannot create abs file path of %s", entry.Name)
+			}
+			contents, err := Read(r, entry.Sha)
+			if err != nil {
+				return Ignores{}, err
+			}
+			blobContents, ok := contents.(*Blob)
+			if !ok {
+				return Ignores{}, fmt.Errorf("%s is not a blob type", entry.Sha)
+			}
+			lines := strings.Split(strings.ReplaceAll(string(blobContents.data), "\r\n", "\n"), "\n")
+			ret.Scoped[dirName] = gitignoreParse(lines)
+		}
+	}
+
+	return ret, nil
 }
 
 func Find(path string) *string {
