@@ -38,8 +38,6 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println()
-
 		if err := StatusIndexWorktree(&repo, index); err != nil {
 			return err
 		}
@@ -67,7 +65,7 @@ func StatusBranch(repo *repository.Repository) error {
 }
 
 func StatusHeadIndex(repo *repository.Repository, index *repository.Index) error {
-	fmt.Printf("Changes to be committed:\n")
+	out := make([]string, 0)
 
 	head, err := repository.TreeToDict(repo, "HEAD", "")
 	if err != nil {
@@ -76,22 +74,30 @@ func StatusHeadIndex(repo *repository.Repository, index *repository.Index) error
 	for _, entry := range index.Entries {
 		if sha, ok := head[entry.Name]; ok {
 			if sha != entry.Sha {
-				fmt.Printf("  modified:  %s\n", entry.Name)
+				out = append(out, fmt.Sprintf("  modified:  %s\n", entry.Name))
 			}
 			delete(head, entry.Name)
 		} else {
-			fmt.Printf("  new file:  %s\n", entry.Name)
+			out = append(out, fmt.Sprintf("  new file:  %s\n", entry.Name))
 		}
 	}
 
 	for entry := range head {
-		fmt.Printf("  deleted:   %s\n", entry)
+		out = append(out, fmt.Sprintf("  deleted:   %s\n", entry))
 	}
+
+	if len(out) != 0 {
+		fmt.Printf("\nChanges to be committed:\n")
+		for _, s := range out {
+			fmt.Print(s)
+		}
+	}
+
 	return nil
 }
 
 func StatusIndexWorktree(repo *repository.Repository, index *repository.Index) error {
-	fmt.Printf("Changes not staged for commit:\n")
+	notStaged := make([]string, 0)
 
 	ignore, err := repo.ReadGitignore()
 	if err != nil {
@@ -129,11 +135,11 @@ func StatusIndexWorktree(repo *repository.Repository, index *repository.Index) e
 					return err
 				}
 				if entry.Sha != newSha {
-					fmt.Printf("  modified:  %s\n", entry.Name)
+					notStaged = append(notStaged, fmt.Sprintf("  modified:  %s\n", entry.Name))
 				}
 			}
 		} else {
-			fmt.Printf("  deleted:   %s\n", entry.Name)
+			notStaged = append(notStaged, fmt.Sprintf("  deleted:   %s\n", entry.Name))
 		}
 
 		allFiles = slices.DeleteFunc(allFiles, func(name string) bool {
@@ -141,15 +147,28 @@ func StatusIndexWorktree(repo *repository.Repository, index *repository.Index) e
 		})
 	}
 
-	fmt.Println()
-	fmt.Println("Untracked files:")
+	if len(notStaged) != 0 {
+		fmt.Printf("Changes not staged for commit:\n")
+		for _, s := range notStaged {
+			fmt.Print(s)
+		}
+	}
 
+	untrackedFiles := make([]string, 0)
 	for _, f := range allFiles {
 		ignored, err := ignore.CheckIgnore(f)
 		if err != nil {
 			return err
 		}
 		if !ignored {
+			untrackedFiles = append(untrackedFiles, f)
+		}
+	}
+
+	if len(untrackedFiles) != 0 {
+		fmt.Println("\nUntracked files:")
+
+		for _, f := range untrackedFiles {
 			fmt.Printf("  %s\n", f)
 		}
 	}
