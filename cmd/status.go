@@ -52,7 +52,7 @@ func StatusBranch(repo *repository.Repository) error {
 		return nil
 	}
 	if branch != "" {
-		fmt.Printf("On branch %s\n", branch)
+		fmt.Printf("On branch %s", branch)
 	} else {
 		headObj, err := repository.ObjectFind(repo, "HEAD", "")
 		if err != nil {
@@ -148,7 +148,7 @@ func StatusIndexWorktree(repo *repository.Repository, index *repository.Index) e
 	}
 
 	if len(notStaged) != 0 {
-		fmt.Printf("Changes not staged for commit:\n")
+		fmt.Printf("\nChanges not staged for commit:\n")
 		for _, s := range notStaged {
 			fmt.Print(s)
 		}

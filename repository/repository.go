@@ -382,7 +382,7 @@ func (r *Repository) ActiveBranch() (string, error) {
 	}
 
 	if bytes.HasPrefix(head, []byte("ref: refs/heads/")) {
-		return string(head[16:]), nil
+		return strings.ReplaceAll(strings.ReplaceAll(string(head[16:]), "\r", ""), "\n", ""), nil
 	}
 
 	return "", nil
