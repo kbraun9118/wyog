@@ -51,7 +51,7 @@ func logGraphviz(repo *repository.Repository, sha string, seen map[string]bool) 
 	}
 	seen[sha] = true
 
-	obj, err := repository.Read(repo, sha)
+	obj, err := repository.ReadObj(repo, sha)
 	if err != nil {
 		return err
 	}

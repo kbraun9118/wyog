@@ -42,7 +42,7 @@ func catFile(repo *repository.Repository, object string, format string) error {
 	if err != nil {
 		return err
 	}
-	obj, err := repository.Read(repo, sha)
+	obj, err := repository.ReadObj(repo, sha)
 	if err != nil {
 		return err
 	}

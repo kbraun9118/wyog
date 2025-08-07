@@ -7,7 +7,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -106,7 +108,7 @@ func (gc *Blob) Fmt() []byte {
 	return []byte("blob")
 }
 
-func Read(repo *Repository, sha string) (GitObject, error) {
+func ReadObj(repo *Repository, sha string) (GitObject, error) {
 	path, err := repo.File("objects", sha[0:2], sha[2:])
 	if err != nil {
 		return nil, fmt.Errorf("cannot open object: %s\n", sha)
@@ -214,7 +216,7 @@ func find(repo *Repository, name string, format string, follow bool) (string, er
 	}
 
 	for {
-		obj, err := Read(repo, sha)
+		obj, err := ReadObj(repo, sha)
 		if err != nil {
 			return "", err
 		}
@@ -256,4 +258,34 @@ func ObjectFind(repo *Repository, name string, format string) (string, error) {
 
 func FindNoFollow(repo *Repository, name string, format string) (string, error) {
 	return find(repo, name, format, false)
+}
+
+func TreeToDict(repo *Repository, ref string, prefix string) (map[string]string, error) {
+	ret := make(map[string]string)
+	treeSha, err := ObjectFind(repo, ref, "tree")
+	if err != nil {
+		return nil, err
+	}
+	tree, err := ReadObj(repo, treeSha)
+	if err != nil {
+		return nil, err
+	}
+
+	treeObj := tree.(*Tree)
+
+	for _, leaf := range treeObj.Items {
+		fullPath := filepath.Join(prefix, leaf.Path)
+		if bytes.HasPrefix(leaf.Mode, []byte("04")) {
+			subMap, err := TreeToDict(repo, leaf.Sha, fullPath)
+			if err != nil {
+				return nil, err
+			}
+
+			maps.Copy(ret, subMap)
+		} else {
+			ret[fullPath] = leaf.Sha
+		}
+	}
+
+	return ret, nil
 }

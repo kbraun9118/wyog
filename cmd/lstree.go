@@ -42,7 +42,7 @@ func ls_tree(repo repository.Repository, ref string, prefix string) error {
 	if err != nil {
 		return err
 	}
-	obj, err := repository.Read(&repo, sha)
+	obj, err := repository.ReadObj(&repo, sha)
 	if err != nil {
 		return err
 	}

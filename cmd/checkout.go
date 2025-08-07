@@ -30,7 +30,7 @@ var checkoutCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		obj, err := repository.Read(&repo, sha)
+		obj, err := repository.ReadObj(&repo, sha)
 		if err != nil {
 			return err
 		}
@@ -40,7 +40,7 @@ var checkoutCmd = &cobra.Command{
 			if !ok {
 				return fmt.Errorf("cannot find tree object")
 			}
-			obj, err = repository.Read(&repo, tree[0])
+			obj, err = repository.ReadObj(&repo, tree[0])
 		}
 
 		treeObj, ok := obj.(*repository.Tree)
@@ -76,7 +76,7 @@ var checkoutCmd = &cobra.Command{
 
 func treeCheckout(repo *repository.Repository, tree *repository.Tree, path string) error {
 	for _, item := range tree.Items {
-		obj, err := repository.Read(repo, item.Sha)
+		obj, err := repository.ReadObj(repo, item.Sha)
 		if err != nil {
 			return err
 		}

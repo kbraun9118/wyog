@@ -22,9 +22,13 @@ var checkIgnoreCmd = &cobra.Command{
 			return err
 		}
 
-		rules, err := repo.ReadIgnore()
+		rules, err := repo.ReadGitignore()
 		for _, path := range args {
-			if CheckIgnore(rules, path) {
+			checked, err := rules.CheckIgnore(path)
+			if err != nil {
+				return err
+			}
+			if checked {
 				fmt.Println(path)
 			}
 		}

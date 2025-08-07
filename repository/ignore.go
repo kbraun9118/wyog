@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"fmt"
+	"path/filepath"
 	"strings"
 
 	ignore "github.com/sabhiram/go-gitignore"
@@ -50,7 +52,18 @@ func NewIgnores() Ignores {
 	}
 }
 
-type IgnoreMatch int
+func (i *Ignores) CheckIgnore(path string) (bool, error) {
+	if filepath.IsAbs(path) {
+		return false, fmt.Errorf("This function requires path to be relative to the repo's root")
+	}
+
+	result := checkIgnoreScoped(i.Scoped, path)
+	if result != nil {
+		return *result, nil
+	}
+
+	return checkIgnoreAbsolute(i.Absolute, path), nil
+}
 
 func checkIgnore1(rules []IgnoreRule, path string) *bool {
 	var result *bool
@@ -60,4 +73,32 @@ func checkIgnore1(rules []IgnoreRule, path string) *bool {
 		}
 	}
 	return result
+}
+
+func checkIgnoreScoped(rulesMap map[string][]IgnoreRule, path string) *bool {
+	parent := filepath.Dir(path)
+	for {
+		if rules, ok := rulesMap[parent]; ok {
+			result := checkIgnore1(rules, path)
+			if result != nil {
+				return result
+			}
+		}
+		parentParent := filepath.Dir(parent)
+		if parent == "" || parent == parentParent {
+			break
+		}
+		parent = parentParent
+	}
+
+	return nil
+}
+
+func checkIgnoreAbsolute(rules []IgnoreRule, path string) bool {
+	result := checkIgnore1(rules, path)
+	if result != nil {
+		return *result
+	}
+
+	return false
 }

@@ -354,11 +354,8 @@ func (r *Repository) ReadGitignore() (Ignores, error) {
 
 	for _, entry := range index.Entries {
 		if entry.Name == ".gitignore" || strings.HasSuffix(entry.Name, "/.gitignore") {
-			dirName, err := filepath.Abs(filepath.Dir(entry.Name))
-			if err != nil {
-				return Ignores{}, fmt.Errorf("cannot create abs file path of %s", entry.Name)
-			}
-			contents, err := Read(r, entry.Sha)
+			dirName := filepath.Dir(entry.Name)
+			contents, err := ReadObj(r, entry.Sha)
 			if err != nil {
 				return Ignores{}, err
 			}
@@ -372,6 +369,23 @@ func (r *Repository) ReadGitignore() (Ignores, error) {
 	}
 
 	return ret, nil
+}
+
+func (r *Repository) ActiveBranch() (string, error) {
+	headPath, err := r.File("HEAD")
+	if err != nil {
+		return "", err
+	}
+	head, err := os.ReadFile(*headPath)
+	if err != nil {
+		return "", fmt.Errorf("cannot open HEAD")
+	}
+
+	if bytes.HasPrefix(head, []byte("ref: refs/heads/")) {
+		return string(head[16:]), nil
+	}
+
+	return "", nil
 }
 
 func Find(path string) *string {
