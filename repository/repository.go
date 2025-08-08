@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
@@ -308,6 +309,35 @@ func (r *Repository) ReadIndex() (*Index, error) {
 
 	index := NewIndexV2(entries)
 	return &index, nil
+}
+
+func (r *Repository) WriteIndex(index *Index) error {
+	indexPath, err := r.File("index2")
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(*indexPath, os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	w := bufio.NewWriter(file)
+	defer w.Flush()
+
+	if err := binary.Write(w, binary.BigEndian, "DIRC"); err != nil {
+		return err
+	}
+	if err := binary.Write(w, binary.BigEndian, int32(index.Version)); err != nil {
+		return err
+	}
+	if err := binary.Write(w, binary.BigEndian, float32(len(index.Entries))); err != nil {
+		return err
+	}
+
+	for _, entry := range index.Entries {
+
+	}
 }
 
 func (r *Repository) ReadGitignore() (Ignores, error) {

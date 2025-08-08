@@ -41,7 +41,7 @@ type IndexEntry struct {
 }
 
 type Index struct {
-	Version int
+	Version int32
 	Entries []IndexEntry
 }
 

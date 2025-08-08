@@ -52,7 +52,7 @@ func StatusBranch(repo *repository.Repository) error {
 		return nil
 	}
 	if branch != "" {
-		fmt.Printf("On branch %s", branch)
+		fmt.Printf("On branch %s\n", branch)
 	} else {
 		headObj, err := repository.ObjectFind(repo, "HEAD", "")
 		if err != nil {
