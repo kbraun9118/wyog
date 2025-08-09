@@ -324,20 +324,74 @@ func (r *Repository) WriteIndex(index *Index) error {
 	defer file.Close()
 	w := bufio.NewWriter(file)
 	defer w.Flush()
+	writeErr := fmt.Errorf("error writing to index")
 
 	if err := binary.Write(w, binary.BigEndian, "DIRC"); err != nil {
-		return err
+		return writeErr
 	}
 	if err := binary.Write(w, binary.BigEndian, int32(index.Version)); err != nil {
-		return err
+		return writeErr
 	}
 	if err := binary.Write(w, binary.BigEndian, float32(len(index.Entries))); err != nil {
-		return err
+		return writeErr
 	}
 
+	idx := 0
 	for _, entry := range index.Entries {
+		mode := entry.ModeType<<12 | entry.ModePerms
+		sha, err := hex.DecodeString(entry.Sha)
+		if err != nil {
+			return fmt.Errorf("cannot decode string")
+		}
+		var flagAssumeValid uint16
+		if entry.AssumeValid {
+			flagAssumeValid = 0x1 << 15
+		}
+		nameBytes := []byte(entry.Name)
+		nameLen := len(nameBytes)
+		if nameLen >= 0xFF {
+			nameLen = 0xFF
+		}
 
+		binEntry := IndexBinaryEntry{
+			CtimeSec:  uint32(entry.Ctime.Unix()),
+			CtimeNSec: uint32(entry.Ctime.Nanosecond()),
+			MtimeSec:  uint32(entry.Mtime.Unix()),
+			MtimeNSec: uint32(entry.Mtime.Nanosecond()),
+			Dev:       uint32(entry.Dev),
+			Ino:       uint32(entry.Ino),
+			Unused:    0,
+			Mode:      uint16(mode),
+			Uid:       uint32(entry.Uid),
+			Gid:       uint32(entry.Gid),
+			Fsize:     uint32(entry.Fsize),
+			Sha:       [20]byte(sha),
+			Flags:     flagAssumeValid | uint16(entry.Stage) | uint16(nameLen),
+		}
+
+		if err := binary.Write(w, binary.BigEndian, binEntry); err != nil {
+			return writeErr
+		}
+		if err := binary.Write(w, binary.BigEndian, nameBytes); err != nil {
+			return writeErr
+		}
+		if err := binary.Write(w, binary.BigEndian, '\x00'); err != nil {
+			return writeErr
+		}
+
+		idx += 62 + len(nameBytes) + 1
+		if idx%8 != 0 {
+			pad := 8 - (idx % 8)
+			for range pad {
+				if err := binary.Write(w, binary.BigEndian, '\x00'); err != nil {
+					return writeErr
+				}
+			}
+
+			idx += pad
+		}
 	}
+	return nil
 }
 
 func (r *Repository) ReadGitignore() (Ignores, error) {
