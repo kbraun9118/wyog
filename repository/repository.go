@@ -348,10 +348,7 @@ func (r *Repository) WriteIndex(index *Index) error {
 			flagAssumeValid = 0x1 << 15
 		}
 		nameBytes := []byte(entry.Name)
-		nameLen := len(nameBytes)
-		if nameLen >= 0xFF {
-			nameLen = 0xFF
-		}
+		nameLen := min(len(nameBytes), 0xFF)
 
 		binEntry := IndexBinaryEntry{
 			CtimeSec:  uint32(entry.Ctime.Unix()),
