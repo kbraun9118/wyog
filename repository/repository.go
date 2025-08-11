@@ -454,6 +454,60 @@ func (r *Repository) ReadGitignore() (Ignores, error) {
 	return ret, nil
 }
 
+func (repo *Repository) Rm(del, skipMissing bool, paths ...string) error {
+	index, err := repo.ReadIndex()
+	if err != nil {
+		return err
+	}
+
+	worktree := fmt.Sprintf("%s%c", repo.Worktree, filepath.Separator)
+
+	absPaths := make(map[string]bool)
+
+	for _, path := range paths {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("cannot convert %s to an absolute path", path)
+		}
+		if strings.HasPrefix(absPath, worktree) {
+			absPaths[absPath] = true
+		} else {
+			return fmt.Errorf("cannot remove paths outside of worktree: %s", path)
+		}
+	}
+
+	keptEntries := make([]IndexEntry, 0)
+	remove := make([]string, 0)
+
+	for _, e := range index.Entries {
+		fullPath := filepath.Join(repo.Worktree, e.Name)
+
+		if absPaths[fullPath] {
+			remove = append(remove, fullPath)
+			delete(absPaths, fullPath)
+		} else {
+			keptEntries = append(keptEntries, e)
+		}
+	}
+
+	if len(absPaths) > 0 && !skipMissing {
+		return fmt.Errorf("cannot remove paths not in the index: %v", absPaths)
+	}
+
+	if del {
+		for _, path := range remove {
+			os.Remove(path)
+		}
+	}
+
+	index.Entries = keptEntries
+	if err := repo.WriteIndex(index); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Repository) ActiveBranch() (string, error) {
 	headPath, err := r.File("HEAD")
 	if err != nil {

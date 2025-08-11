@@ -130,7 +130,7 @@ func StatusIndexWorktree(repo *repository.Repository, index *repository.Index) e
 				if err != nil {
 					return fmt.Errorf("cannot open file")
 				}
-				newSha, err := objectHash(fd, "blob", nil)
+				newSha, err := ObjectHash(fd, "blob", nil)
 				if err != nil {
 					return err
 				}

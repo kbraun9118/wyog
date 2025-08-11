@@ -38,7 +38,7 @@ var (
 			}
 			defer file.Close()
 
-			sha, err := objectHash(file, flagType, repo)
+			sha, err := ObjectHash(file, flagType, repo)
 			if err != nil {
 				return err
 			}
@@ -49,7 +49,7 @@ var (
 	}
 )
 
-func objectHash(fd *os.File, format string, repo *repository.Repository) (string, error) {
+func ObjectHash(fd *os.File, format string, repo *repository.Repository) (string, error) {
 	data, err := io.ReadAll(fd)
 	if err != nil {
 		return "", fmt.Errorf("cannot read file")

@@ -6,7 +6,9 @@ import (
 )
 
 var rmCmd = &cobra.Command{
-	Use: "rm",
+	Use:   "rm paths...",
+	Short: "Remove files from the working tree and the index.",
+	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		p, err := repository.FindRequire(".")
 		if err != nil {
@@ -23,6 +25,10 @@ var rmCmd = &cobra.Command{
 		}
 
 		if err := repo.WriteIndex(index); err != nil {
+			return err
+		}
+
+		if err := repo.Rm(true, false, args...); err != nil {
 			return err
 		}
 
