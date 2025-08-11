@@ -312,27 +312,26 @@ func (r *Repository) ReadIndex() (*Index, error) {
 }
 
 func (r *Repository) WriteIndex(index *Index) error {
-	indexPath, err := r.File("index2")
+	indexPath, err := r.File("index")
 	if err != nil {
 		return err
 	}
 
-	file, err := os.OpenFile(*indexPath, os.O_TRUNC, 0644)
+	file, err := os.OpenFile(*indexPath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	w := bufio.NewWriter(file)
-	defer w.Flush()
 	writeErr := fmt.Errorf("error writing to index")
 
-	if err := binary.Write(w, binary.BigEndian, "DIRC"); err != nil {
+	if err := binary.Write(w, binary.BigEndian, []byte("DIRC")); err != nil {
 		return writeErr
 	}
 	if err := binary.Write(w, binary.BigEndian, int32(index.Version)); err != nil {
 		return writeErr
 	}
-	if err := binary.Write(w, binary.BigEndian, float32(len(index.Entries))); err != nil {
+	if err := binary.Write(w, binary.BigEndian, int32(len(index.Entries))); err != nil {
 		return writeErr
 	}
 
@@ -372,7 +371,7 @@ func (r *Repository) WriteIndex(index *Index) error {
 		if err := binary.Write(w, binary.BigEndian, nameBytes); err != nil {
 			return writeErr
 		}
-		if err := binary.Write(w, binary.BigEndian, '\x00'); err != nil {
+		if err := binary.Write(w, binary.BigEndian, byte('\x00')); err != nil {
 			return writeErr
 		}
 
@@ -380,13 +379,16 @@ func (r *Repository) WriteIndex(index *Index) error {
 		if idx%8 != 0 {
 			pad := 8 - (idx % 8)
 			for range pad {
-				if err := binary.Write(w, binary.BigEndian, '\x00'); err != nil {
+				if err := binary.Write(w, binary.BigEndian, byte('\x00')); err != nil {
 					return writeErr
 				}
 			}
 
 			idx += pad
 		}
+	}
+	if err := w.Flush(); err != nil {
+		return writeErr
 	}
 	return nil
 }
