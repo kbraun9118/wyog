@@ -231,7 +231,7 @@ func find(repo *Repository, name string, format string, follow bool) (string, er
 
 		switch obj := obj.(type) {
 		case *Tag:
-			tagObj, ok := obj.Kvlm.Headers.Get("object")
+			tagObj, ok := obj.Kvlm.Get("object")
 			if !ok || len(tagObj) == 0 {
 				return "", fmt.Errorf("no object found")
 			}
@@ -239,7 +239,7 @@ func find(repo *Repository, name string, format string, follow bool) (string, er
 			continue
 		case *Commit:
 			if format == "tree" {
-				treeObj, ok := obj.Kvlm.Headers.Get("tree")
+				treeObj, ok := obj.Kvlm.Get("tree")
 				if !ok || len(treeObj) == 0 {
 					return "", fmt.Errorf("no object found")
 				}

@@ -70,7 +70,7 @@ func logGraphviz(repo *repository.Repository, sha string, seen map[string]bool) 
 
 	fmt.Printf("  c_%s [label=\"%s: %s\"]\n", sha, sha[:7], message)
 
-	parent, ok := commit.Kvlm.Headers.Get("parent")
+	parent, ok := commit.Kvlm.Get("parent")
 	if !ok {
 		return nil
 	}

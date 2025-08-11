@@ -1,5 +1,7 @@
 package util
 
+import "iter"
+
 type LinkedMap[K comparable, V any] struct {
 	m    map[K]V
 	keys []K
@@ -39,7 +41,7 @@ func (lm *LinkedMap[K, V]) Len() int {
 	return len(lm.keys)
 }
 
-func (lm LinkedMap[K, V]) Iterate() func(yield func(K, V) bool) {
+func (lm LinkedMap[K, V]) Iterate() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for _, key := range lm.keys {
 			if !yield(key, lm.m[key]) {

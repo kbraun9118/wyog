@@ -36,7 +36,7 @@ var checkoutCmd = &cobra.Command{
 		}
 
 		if commitObj, ok := obj.(*repository.Commit); ok {
-			tree, ok := commitObj.Kvlm.Headers.Get("tree")
+			tree, ok := commitObj.Kvlm.Get("tree")
 			if !ok {
 				return fmt.Errorf("cannot find tree object")
 			}

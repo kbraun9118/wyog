@@ -3,9 +3,11 @@ package repository
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
@@ -391,6 +393,87 @@ func (r *Repository) WriteIndex(index *Index) error {
 		return writeErr
 	}
 	return nil
+}
+
+type dirEntry struct {
+	basename, sha string
+}
+
+func (r *Repository) TreeFromIndex(index *Index) (string, error) {
+	contents := make(map[string][]any)
+	contents[""] = make([]any, 0)
+
+	for _, entry := range index.Entries {
+		dirName := filepath.Dir(entry.Name)
+		if dirName == "." {
+			dirName = ""
+		}
+
+		key := dirName
+		for key != "" {
+			if _, ok := contents[key]; !ok {
+				contents[key] = make([]any, 0)
+			}
+			key = filepath.Dir(key)
+			if key == "." {
+				key = ""
+			}
+		}
+
+		contents[dirName] = append(contents[dirName], entry)
+	}
+
+	sortedPath := slices.SortedFunc(maps.Keys(contents), func(a, b string) int {
+		return cmp.Compare(len(b), len(a))
+	})
+
+	sha := ""
+
+	for _, path := range sortedPath {
+		tree := Tree{}
+
+		for _, entry := range contents[path] {
+
+			var leaf TreeLeaf
+			switch entry := entry.(type) {
+			case IndexEntry:
+				leafMode := fmt.Sprintf("%02o%04o", entry.ModeType, entry.ModePerms)
+				leaf = TreeLeaf{
+					Mode: []byte(leafMode),
+					Path: filepath.Base(entry.Name),
+					Sha:  entry.Sha,
+				}
+			case dirEntry:
+				leaf = TreeLeaf{
+					Mode: []byte("040000"),
+					Path: entry.basename,
+					Sha:  entry.sha,
+				}
+			default:
+				return "", fmt.Errorf("invalid value type")
+			}
+
+			tree.Items = append(tree.Items, leaf)
+		}
+
+		var err error
+		sha, err = Write(&tree, r)
+		if err != nil {
+			return "", err
+		}
+
+		parent := filepath.Dir(path)
+		if parent == "." {
+			parent = ""
+		}
+		base := filepath.Base(path)
+		if base == "." {
+			continue
+		}
+		contents[parent] = append(contents[parent], dirEntry{base, sha})
+	}
+
+	return sha, nil
 }
 
 func (r *Repository) ReadGitignore() (Ignores, error) {

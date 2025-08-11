@@ -8,7 +8,7 @@ import (
 )
 
 type KvlmData struct {
-	Headers util.LinkedMap[string, []string]
+	*util.LinkedMap[string, []string]
 	Message []byte
 }
 
@@ -26,8 +26,8 @@ func kvlmParse(raw []byte, start int, headers *util.LinkedMap[string, []string])
 		}
 
 		return KvlmData{
-			Headers: *headers,
-			Message: raw[start+1:],
+			LinkedMap: headers,
+			Message:   raw[start+1:],
 		}
 	}
 
@@ -56,7 +56,7 @@ func kvlmParse(raw []byte, start int, headers *util.LinkedMap[string, []string])
 func (kvlm KvlmData) Serialize() []byte {
 	ret := make([]byte, 0)
 
-	for k, val := range kvlm.Headers.Iterate() {
+	for k, val := range kvlm.Iterate() {
 		for _, v := range val {
 			ret = append(ret, []byte(k)...)
 			ret = append(ret, ' ')
