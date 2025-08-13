@@ -325,6 +325,7 @@ func (r *Repository) WriteIndex(index *Index) error {
 	}
 	defer file.Close()
 	w := bufio.NewWriter(file)
+	defer w.Flush()
 	writeErr := fmt.Errorf("error writing to index")
 
 	if err := binary.Write(w, binary.BigEndian, []byte("DIRC")); err != nil {
@@ -388,9 +389,6 @@ func (r *Repository) WriteIndex(index *Index) error {
 
 			idx += pad
 		}
-	}
-	if err := w.Flush(); err != nil {
-		return writeErr
 	}
 	return nil
 }
