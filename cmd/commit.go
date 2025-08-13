@@ -56,14 +56,14 @@ var (
 			if err != nil {
 				return err
 			}
-			
+
 			activeBranch, err := repo.ActiveBranch()
 			if err != nil {
 				return err
 			}
 			var file *string
 			if len(activeBranch) != 0 {
-			
+
 				file, err = repo.File("refs", "heads", activeBranch)
 				if err != nil {
 					return err
@@ -98,7 +98,7 @@ func CreateCommit(
 	}
 
 	message = strings.ReplaceAll(message, "\n", "")
-	author = fmt.Sprintf("%s %d %s", author, timestamp.Unix(), timestamp.Format("-7000"))
+	author = fmt.Sprintf("%s %d %s", author, timestamp.Unix(), timestamp.Format("-0700"))
 
 	commit.Kvlm.Set("author", []string{author})
 	commit.Kvlm.Set("committer", []string{author})
